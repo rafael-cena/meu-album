@@ -1,6 +1,6 @@
 {
   "name": "Meu Álbum",
-  "short_name": "meualbum",
+  "short_name": "Meu Álbum",
   "description": "Gerenciador de figurinhas e trocas para a Copa 2026",
   "start_url": "/",
   "display": "standalone",

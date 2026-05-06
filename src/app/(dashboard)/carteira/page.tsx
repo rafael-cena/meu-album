@@ -25,7 +25,7 @@ const CORES = {
 const LABELS = {
   album: 'Álbum',
   pac7: 'Pacotinho (7)',
-  pac5: 'Pacotinho (5)',
+  pac5: 'Pacotinho (5) McDonald\'s',
   figav: 'Figurinha Avulsa',
 };
 
@@ -34,7 +34,7 @@ export default function Carteira() {
   const [loading, setLoading] = useState(true);
 
   // Estados do formulário
-  const [tipo, setTipo] = useState<TipoCusto>('pac5');
+  const [tipo, setTipo] = useState<TipoCusto>('pac7');
   const [descricao, setDescricao] = useState('');
   const [preco, setPreco] = useState('');
   const [qtd, setQtd] = useState('1');

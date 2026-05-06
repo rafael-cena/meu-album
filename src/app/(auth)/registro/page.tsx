@@ -94,7 +94,7 @@ export default function Registro() {
               placeholder="Ex: joao123"
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
               value={usuario}
-              onChange={(e) => setUsuario(e.target.value.replace(/\s+/g, ''))} // Evita espaços no nome de usuário
+              onChange={(e) => setUsuario(e.target.value.replace(/\s+/g, '').toLowerCase())} // Evita espaços no nome de usuário
             />
           </div>
 

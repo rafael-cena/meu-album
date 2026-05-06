@@ -62,7 +62,7 @@ export default function Login() {
           placeholder="Usuário"
           className="w-full p-2 border border-gray-300 rounded mb-4 text-black"
           value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
+          onChange={(e) => setUsuario(e.target.value.replace(/\s+/g, '').toLowerCase())}
         />
         <input
           type="password"
