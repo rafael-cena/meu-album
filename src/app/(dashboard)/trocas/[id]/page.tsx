@@ -1,0 +1,136 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+
+interface MatchTroca {
+    membro_id: string;
+    figurinhas_disponiveis: string[]; // Figurinhas que ele tem repetida e eu preciso
+}
+
+export default function DetalheGrupo() {
+    const params = useParams();
+    const router = useRouter();
+    const grupoId = params.id as string;
+
+    const [nomeGrupo, setNomeGrupo] = useState('');
+    const [matches, setMatches] = useState<MatchTroca[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        carregarMatches();
+    }, [grupoId]);
+
+    const carregarMatches = async () => {
+        setLoading(true);
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+        const meuId = userData.user.id;
+
+        // 1. Busca detalhes do grupo
+        const { data: grupo } = await supabase.from('grupos').select('nome').eq('id', grupoId).single();
+        if (grupo) setNomeGrupo(grupo.nome);
+
+        // 2. Busca os membros do grupo (exceto eu)
+        const { data: membros } = await supabase
+            .from('grupo_membros')
+            .select('user_id')
+            .eq('grupo_id', grupoId)
+            .neq('user_id', meuId);
+
+        if (!membros || membros.length === 0) {
+            setLoading(false);
+            return;
+        }
+
+        const outrosMembrosIds = membros.map(m => m.user_id);
+
+        // 3. Busca minhas obtidas
+        const { data: minhasObtidasData } = await supabase
+            .from('obtidas')
+            .select('codigo')
+            .eq('user_id', meuId);
+
+        const minhasObtidas = new Set(minhasObtidasData?.map(o => o.codigo) || []);
+
+        // 4. Busca as repetidas dos outros membros
+        const { data: repetidasOutros } = await supabase
+            .from('repetidas')
+            .select('user_id, codigo')
+            .in('user_id', outrosMembrosIds);
+
+        // 5. Lógica de Matchmaker
+        const matchesPorUsuario: Record<string, string[]> = {};
+
+        repetidasOutros?.forEach(rep => {
+            // Se a repetida do outro for uma figurinha que eu NÃO tenho
+            if (!minhasObtidas.has(rep.codigo)) {
+                if (!matchesPorUsuario[rep.user_id]) {
+                    matchesPorUsuario[rep.user_id] = [];
+                }
+                matchesPorUsuario[rep.user_id].push(rep.codigo);
+            }
+        });
+
+        const matchesArray = Object.keys(matchesPorUsuario).map(userId => ({
+            membro_id: userId,
+            figurinhas_disponiveis: matchesPorUsuario[userId]
+        }));
+
+        setMatches(matchesArray);
+        setLoading(false);
+    };
+
+    const copiarId = () => {
+        navigator.clipboard.writeText(grupoId);
+        alert('ID do grupo copiado!');
+    };
+
+    return (
+        <div className="p-4 max-w-lg mx-auto mt-4 pb-20">
+            <button onClick={() => router.push('/trocas')} className="mb-4 text-blue-600 font-medium">
+                ← Voltar aos Grupos
+            </button>
+
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex justify-between items-center">
+                <div>
+                    <h1 className="text-xl font-bold text-gray-800">{nomeGrupo}</h1>
+                    <p className="text-xs text-gray-500 mt-1 break-all">ID: {grupoId}</p>
+                </div>
+                <button onClick={copiarId} className="bg-gray-100 p-2 rounded text-sm font-bold text-gray-700 hover:bg-gray-200">
+                    Copiar ID
+                </button>
+            </div>
+
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Matches (O que eles têm e você precisa)</h2>
+
+            {loading ? (
+                <p className="text-gray-500">Buscando matches no banco de dados...</p>
+            ) : matches.length > 0 ? (
+                <ul className="space-y-4">
+                    {matches.map(match => (
+                        <li key={match.membro_id} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                            {/* Exibe parte do ID do usuário para identificação básica, ideal seria ter uma tabela de profiles com nome */}
+                            <h3 className="font-bold text-blue-900 mb-2">Colecionador: {match.membro_id.substring(0, 8)}...</h3>
+                            <p className="text-sm text-gray-700 mb-2">Possui {match.figurinhas_disponiveis.length} figurinhas que você precisa:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {match.figurinhas_disponiveis.sort().map(fig => (
+                                    <span key={fig} className="bg-white border border-blue-300 text-blue-800 text-xs font-bold px-2 py-1 rounded">
+                                        {fig}
+                                    </span>
+                                ))}
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                    <span className="text-4xl mb-2 block">😢</span>
+                    <p className="text-gray-600 font-medium">Nenhum match encontrado.</p>
+                    <p className="text-sm text-gray-500 mt-1">Nenhum membro do grupo tem figurinhas repetidas que faltam para você.</p>
+                </div>
+            )}
+        </div>
+    );
+}
