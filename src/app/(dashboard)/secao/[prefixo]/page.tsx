@@ -25,33 +25,40 @@ export default function SecaoPage() {
   }, [prefixo]);
 
   const carregarFigurinhas = async () => {
-    setLoading(true);
+    // 1. Pega o usuário logado
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
+    const userId = userData.user.id;
 
-    // Busca obtidas
-    const { data: dataObtidas } = await supabase
+    // 2. Busca as obtidas APENAS deste usuário
+    const { data: obtidasData } = await supabase
       .from('obtidas')
       .select('codigo')
-      .like('codigo', `${prefixo}%`);
+      // Filtra pelo prefixo da seção (ex: BRA%)
+      .like('codigo', `${prefixo}%`)
+      // A LINHA MÁGICA QUE FALTAVA:
+      .eq('user_id', userId);
 
-    // Busca repetidas
-    const { data: dataRepetidas } = await supabase
+    if (obtidasData) {
+      setObtidas(obtidasData.map(item => item.codigo));
+    }
+
+    // 3. Busca as repetidas APENAS deste usuário
+    const { data: repetidasData } = await supabase
       .from('repetidas')
       .select('codigo, quantidade')
-      .like('codigo', `${prefixo}%`);
+      .like('codigo', `${prefixo}%`)
+      // A LINHA MÁGICA AQUI TAMBÉM:
+      .eq('user_id', userId);
 
-    if (dataObtidas) {
-      setObtidas(dataObtidas.map(item => item.codigo));
-    }
-
-    if (dataRepetidas) {
-      const repMap: Record<string, number> = {};
-      dataRepetidas.forEach(item => {
-        repMap[item.codigo] = item.quantidade;
+    if (repetidasData) {
+      const repetidasMap: Record<string, number> = {};
+      repetidasData.forEach(item => {
+        repetidasMap[item.codigo] = item.quantidade;
       });
-      setRepetidasMap(repMap);
+      setRepetidasMap(repetidasMap);
     }
+
     setLoading(false);
   };
 

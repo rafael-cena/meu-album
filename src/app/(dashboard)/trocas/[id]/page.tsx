@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 
 interface MatchTroca {
     membro_id: string;
-    figurinhas_disponiveis: string[]; // Figurinhas que ele tem repetida e eu preciso
+    nome_membro: string; // Adicionado para facilitar a exibição
+    figurinhas_disponiveis: string[];
 }
 
 export default function DetalheGrupo() {
@@ -46,7 +47,18 @@ export default function DetalheGrupo() {
 
         const outrosMembrosIds = membros.map(m => m.user_id);
 
-        // 3. Busca minhas obtidas
+        // 3. Busca os NOMES desses membros na tabela 'profiles'
+        const { data: perfisData } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', outrosMembrosIds);
+
+        const mapaNomes: Record<string, string> = {};
+        perfisData?.forEach(p => {
+            mapaNomes[p.id] = p.full_name;
+        });
+
+        // 4. Busca minhas obtidas
         const { data: minhasObtidasData } = await supabase
             .from('obtidas')
             .select('codigo')
@@ -54,17 +66,16 @@ export default function DetalheGrupo() {
 
         const minhasObtidas = new Set(minhasObtidasData?.map(o => o.codigo) || []);
 
-        // 4. Busca as repetidas dos outros membros
+        // 5. Busca as repetidas dos outros membros
         const { data: repetidasOutros } = await supabase
             .from('repetidas')
             .select('user_id, codigo')
             .in('user_id', outrosMembrosIds);
 
-        // 5. Lógica de Matchmaker
+        // 6. Lógica de Matchmaker
         const matchesPorUsuario: Record<string, string[]> = {};
 
         repetidasOutros?.forEach(rep => {
-            // Se a repetida do outro for uma figurinha que eu NÃO tenho
             if (!minhasObtidas.has(rep.codigo)) {
                 if (!matchesPorUsuario[rep.user_id]) {
                     matchesPorUsuario[rep.user_id] = [];
@@ -75,6 +86,7 @@ export default function DetalheGrupo() {
 
         const matchesArray = Object.keys(matchesPorUsuario).map(userId => ({
             membro_id: userId,
+            nome_membro: mapaNomes[userId] || 'Colecionador Desconhecido', // Usa o nome buscado
             figurinhas_disponiveis: matchesPorUsuario[userId]
         }));
 
@@ -106,13 +118,17 @@ export default function DetalheGrupo() {
             <h2 className="text-lg font-bold text-gray-800 mb-4">Matches (O que eles têm e você precisa)</h2>
 
             {loading ? (
-                <p className="text-gray-500">Buscando matches no banco de dados...</p>
+                <div className="flex justify-center py-10">
+                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
             ) : matches.length > 0 ? (
                 <ul className="space-y-4">
                     {matches.map(match => (
                         <li key={match.membro_id} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                            {/* Exibe parte do ID do usuário para identificação básica, ideal seria ter uma tabela de profiles com nome */}
-                            <h3 className="font-bold text-blue-900 mb-2">Colecionador: {match.membro_id.substring(0, 8)}...</h3>
+                            <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                                <span className="bg-blue-200 p-1 rounded-full text-[10px]">👤</span>
+                                {match.nome_membro}
+                            </h3>
                             <p className="text-sm text-gray-700 mb-2">Possui {match.figurinhas_disponiveis.length} figurinhas que você precisa:</p>
                             <div className="flex flex-wrap gap-2">
                                 {match.figurinhas_disponiveis.sort().map(fig => (

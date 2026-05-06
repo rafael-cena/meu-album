@@ -42,12 +42,22 @@ export default function Registro() {
     const { error } = await supabaseClient.auth.signUp({
       email: emailFicticio,
       password: senha,
+      options: {
+        data: {
+          full_name: usuario,
+        }
+      }
     });
 
     if (error) {
       const { error } = await supabaseClient.auth.signUp({
         email: emailFicticio,
         password: senha,
+        options: {
+          data: {
+            full_name: usuario,
+          }
+        }
       });
 
       if (error) {
