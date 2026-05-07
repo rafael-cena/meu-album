@@ -1,148 +1,255 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SECOES_ALBUM } from '@/utils/constants';
 
-export default function Relatorios() {
-  const [loadingFaltantes, setLoadingFaltantes] = useState(false);
-  const [loadingRepetidas, setLoadingRepetidas] = useState(false);
+interface Repetida {
+  codigo: string;
+  quantidade: number;
+}
 
-  // Estados para o feedback visual de "Copiado"
-  const [copiadoFaltantes, setCopiadoFaltantes] = useState(false);
-  const [copiadoRepetidas, setCopiadoRepetidas] = useState(false);
+export default function ExportarRelatorios() {
+  const [repetidas, setRepetidas] = useState<Repetida[]>([]);
+  const [obtidas, setObtidas] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Função para copiar para a área de transferência
-  const copiarParaClipboard = async (texto: string, tipo: 'faltantes' | 'repetidas') => {
-    try {
-      await navigator.clipboard.writeText(texto);
+  // Estados para o Modal
+  const [cromoSelecionado, setCromoSelecionado] = useState<Repetida | null>(null);
+  const [atualizando, setAtualizando] = useState(false);
 
-      if (tipo === 'faltantes') {
-        setCopiadoFaltantes(true);
-        setTimeout(() => setCopiadoFaltantes(false), 2000);
-      } else {
-        setCopiadoRepetidas(true);
-        setTimeout(() => setCopiadoRepetidas(false), 2000);
-      }
-    } catch (err) {
-      alert("Erro ao copiar. Verifique as permissões do navegador.");
-    }
-  };
+  useEffect(() => {
+    carregarDados();
+  }, []);
 
-  const copiarRelatorioFaltantes = async () => {
-    setLoadingFaltantes(true);
+  const carregarDados = async () => {
+    setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
 
-    const { data: obtidasData } = await supabase
+    // Busca as Repetidas
+    const { data: repData } = await supabase
+      .from('repetidas')
+      .select('codigo, quantidade')
+      .eq('user_id', userData.user.id)
+      .order('codigo', { ascending: true });
+
+    if (repData) setRepetidas(repData);
+
+    // Busca as Obtidas (para poder calcular as faltantes)
+    const { data: obtData } = await supabase
       .from('obtidas')
       .select('codigo')
-      .eq('user_id', userData.user?.id);
+      .eq('user_id', userData.user.id);
 
-    const obtidasSet = new Set(obtidasData?.map(o => o.codigo) || []);
-    let relatorioText = '📉 MINHAS FALTANTES - COPA 2026\n\n';
-    let totalFaltantes = 0;
+    if (obtData) setObtidas(obtData.map(item => item.codigo));
+
+    setLoading(false);
+  };
+
+  // --- LÓGICA DO MODAL DE REPETIDAS ---
+  const alterarQuantidade = async (delta: number) => {
+    if (!cromoSelecionado || atualizando) return;
+    setAtualizando(true);
+
+    const novaQtd = cromoSelecionado.quantidade + delta;
+
+    if (novaQtd <= 0) {
+      await removerRegistro();
+    } else {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('repetidas')
+        .update({ quantidade: novaQtd })
+        .eq('user_id', userData.user?.id)
+        .eq('codigo', cromoSelecionado.codigo);
+
+      if (!error) {
+        setRepetidas(prev => prev.map(item =>
+          item.codigo === cromoSelecionado.codigo ? { ...item, quantidade: novaQtd } : item
+        ));
+        setCromoSelecionado({ ...cromoSelecionado, quantidade: novaQtd });
+      }
+    }
+    setAtualizando(false);
+  };
+
+  const removerRegistro = async () => {
+    if (!cromoSelecionado) return;
+    setAtualizando(true);
+
+    const { data: userData } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('repetidas')
+      .delete()
+      .eq('user_id', userData.user?.id)
+      .eq('codigo', cromoSelecionado.codigo);
+
+    if (!error) {
+      setRepetidas(prev => prev.filter(item => item.codigo !== cromoSelecionado.codigo));
+      setCromoSelecionado(null);
+    }
+    setAtualizando(false);
+  };
+
+  // --- FUNÇÕES DE EXPORTAÇÃO ---
+  const copiarRepetidas = () => {
+    if (repetidas.length === 0) {
+      alert('Você não tem figurinhas repetidas cadastradas.');
+      return;
+    }
+
+    // Pega o link atual do site (ex: https://album2026.com.br)
+    const linkSite = window.location.origin;
+
+    const texto = `📋 *Minhas Repetidas - Copa 2026*\n\n` +
+      repetidas.map(r => `${r.codigo} (${r.quantidade}x)`).join(', ') +
+      `\n\n⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
+
+    navigator.clipboard.writeText(texto);
+    alert('Lista de REPETIDAS copiada para a área de transferência!');
+  };
+
+  const copiarFaltantes = () => {
+    let texto = `🔍 *Minhas Faltantes - Copa 2026*\n\n`;
+    let temFaltante = false;
 
     SECOES_ALBUM.forEach(secao => {
+      const obtidasSecao = obtidas.filter(cod => cod.startsWith(secao.prefixo));
+
+      const numerosObtidos = obtidasSecao.map(cod => {
+        const num = parseInt(cod.replace(secao.prefixo, '').trim());
+        return isNaN(num) ? -1 : num;
+      });
+
       const faltantesSecao = [];
+
       for (let i = 1; i <= secao.total; i++) {
-        const codigo = `${secao.prefixo}${i}`;
-        if (!obtidasSet.has(codigo)) {
-          faltantesSecao.push(codigo);
+        if (!numerosObtidos.includes(i)) {
+          faltantesSecao.push(i);
         }
       }
 
       if (faltantesSecao.length > 0) {
-        relatorioText += `*${secao.nome}* (${faltantesSecao.length}):\n`;
-        relatorioText += faltantesSecao.join(', ') + '\n\n';
-        totalFaltantes += faltantesSecao.length;
+        texto += `*${secao.nome}:* ${faltantesSecao.join(', ')}\n`;
+        temFaltante = true;
       }
     });
 
-    relatorioText += `Total Faltantes: ${totalFaltantes}`;
-
-    await copiarParaClipboard(relatorioText, 'faltantes');
-    setLoadingFaltantes(false);
-  };
-
-  const copiarRelatorioRepetidas = async () => {
-    setLoadingRepetidas(true);
-    const { data: userData } = await supabase.auth.getUser();
-
-    const { data: repetidasData } = await supabase
-      .from('repetidas')
-      .select('codigo, quantidade')
-      .eq('user_id', userData.user?.id)
-      .order('codigo', { ascending: true });
-
-    let relatorioText = '🔄 MINHAS REPETIDAS - COPA 2026\n\n';
-    let totalRepetidas = 0;
-
-    if (!repetidasData || repetidasData.length === 0) {
-      relatorioText += 'Nenhuma figurinha repetida registrada.';
-    } else {
-      const repetidasMap: Record<string, string[]> = {};
-
-      repetidasData.forEach(item => {
-        const prefixo = item.codigo.replace(/[0-9]/g, '');
-        if (!repetidasMap[prefixo]) repetidasMap[prefixo] = [];
-        const textoQtd = item.quantidade > 1 ? `${item.codigo}(x${item.quantidade})` : item.codigo;
-        repetidasMap[prefixo].push(textoQtd);
-        totalRepetidas += item.quantidade;
-      });
-
-      Object.keys(repetidasMap).forEach(prefixo => {
-        const secao = SECOES_ALBUM.find(s => s.prefixo === prefixo);
-        const nomeSecao = secao ? secao.nome : prefixo;
-
-        relatorioText += `*${nomeSecao}*:\n`;
-        relatorioText += repetidasMap[prefixo].join(', ') + '\n\n';
-      });
+    if (!temFaltante) {
+      alert('Parabéns! Seu álbum está completo, não há faltantes! 🎉');
+      return;
     }
 
-    relatorioText += `Total de Repetidas: ${totalRepetidas}`;
+    // Pega o link atual do site
+    const linkSite = window.location.origin;
 
-    await copiarParaClipboard(relatorioText, 'repetidas');
-    setLoadingRepetidas(false);
+    // Adiciona o convite no final da lista de faltantes
+    texto += `\n⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
+
+    navigator.clipboard.writeText(texto);
+    alert('Lista de FALTANTES copiada para a área de transferência!');
   };
 
   return (
-    <div className="p-4 max-w-lg mx-auto mt-4 pb-20">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Compartilhar Listas</h1>
-      <p className="text-gray-600 mb-8 text-sm">Copie suas listas com formatação para enviar rapidamente no WhatsApp ou em grupos de troca.</p>
+    <div className="p-4 max-w-lg mx-auto mt-4 pb-24">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Exportar & Gerenciar</h1>
 
-      <div className="flex flex-col gap-4">
-        {/* Botão Faltantes */}
+      {/* Botões de Exportação */}
+      <div className="flex gap-3 mb-8">
         <button
-          onClick={copiarRelatorioFaltantes}
-          disabled={loadingFaltantes || copiadoFaltantes}
-          className={`flex items-center justify-start p-4 border shadow-sm rounded-lg transition active:scale-95 
-            ${copiadoFaltantes ? 'bg-green-50 border-green-300' : 'bg-white border-blue-200 hover:bg-blue-50'}`}
+          onClick={copiarRepetidas}
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white p-3 rounded-xl text-sm font-bold shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-1"
         >
-          <span className="text-4xl mr-4">{copiadoFaltantes ? '✅' : '📉'}</span>
-          <div className="text-left">
-            <h3 className={`font-bold text-lg ${copiadoFaltantes ? 'text-green-700' : 'text-blue-800'}`}>
-              {copiadoFaltantes ? 'Copiado para a área de transferência!' : 'Copiar Lista de Faltantes'}
-            </h3>
-            {!copiadoFaltantes && <p className="text-sm text-gray-500 mt-1">Gera e copia a lista do que você precisa.</p>}
-          </div>
+          <span className="text-xl">📋</span>
+          Copiar Repetidas
         </button>
 
-        {/* Botão Repetidas */}
         <button
-          onClick={copiarRelatorioRepetidas}
-          disabled={loadingRepetidas || copiadoRepetidas}
-          className={`flex items-center justify-start p-4 border shadow-sm rounded-lg transition active:scale-95 
-            ${copiadoRepetidas ? 'bg-green-50 border-green-300' : 'bg-white border-yellow-200 hover:bg-yellow-50'}`}
+          onClick={copiarFaltantes}
+          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-xl text-sm font-bold shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-1"
         >
-          <span className="text-4xl mr-4">{copiadoRepetidas ? '✅' : '🔄'}</span>
-          <div className="text-left">
-            <h3 className={`font-bold text-lg ${copiadoRepetidas ? 'text-green-700' : 'text-yellow-800'}`}>
-              {copiadoRepetidas ? 'Copiado para a área de transferência!' : 'Copiar Lista de Repetidas'}
-            </h3>
-            {!copiadoRepetidas && <p className="text-sm text-gray-500 mt-1">Gera e copia seu bolo de extras.</p>}
-          </div>
+          <span className="text-xl">🔍</span>
+          Copiar Faltantes
         </button>
       </div>
+
+      <h2 className="text-lg font-bold text-gray-700 mb-4 border-b pb-2">Meu Estoque de Repetidas</h2>
+
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : repetidas.length > 0 ? (
+        <div className="grid grid-cols-3 gap-3">
+          {repetidas.map((item) => (
+            <button
+              key={item.codigo}
+              onClick={() => setCromoSelecionado(item)}
+              className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm flex flex-col items-center hover:border-blue-400 transition-all active:scale-95"
+            >
+              <span className="font-black text-blue-800">{item.codigo}</span>
+              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full mt-1 font-bold">
+                {item.quantidade}x
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-100 shadow-sm">
+          Nenhuma figurinha repetida cadastrada ainda.
+        </p>
+      )}
+
+      {/* MODAL DE GERENCIAMENTO (Mantido igual) */}
+      {cromoSelecionado && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xs p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="text-center mb-6">
+              <h3 className="text-3xl font-black text-gray-800 mb-1">{cromoSelecionado.codigo}</h3>
+              <p className="text-sm text-gray-500">Gerenciar quantidade</p>
+            </div>
+
+            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl mb-6 border border-gray-100">
+              <button
+                onClick={() => alterarQuantidade(-1)}
+                disabled={atualizando}
+                className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center text-2xl font-bold text-gray-700 active:scale-90 shadow-sm disabled:opacity-50"
+              >
+                -
+              </button>
+
+              <span className="text-4xl font-black text-blue-600">
+                {cromoSelecionado.quantidade}
+              </span>
+
+              <button
+                onClick={() => alterarQuantidade(1)}
+                disabled={atualizando}
+                className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center text-2xl font-bold text-gray-700 active:scale-90 shadow-sm disabled:opacity-50"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={removerRegistro}
+                disabled={atualizando}
+                className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl border border-red-100 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Remover Figurinha
+              </button>
+              <button
+                onClick={() => setCromoSelecionado(null)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl active:scale-95 transition-all"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

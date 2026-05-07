@@ -29,26 +29,33 @@ export default function Login() {
 
   const handleAuth = async (isLogin: boolean) => {
     setErro('');
-    // Cria o cliente dinâmico com base no checkbox
     const supabaseClient = getSupabaseClient(lembrarMim);
-    const emailFicticio = `${usuario}@album2026.com`;
 
-    if (isLogin) {
-      const { error } = await supabaseClient.auth.signInWithPassword({
-        email: emailFicticio,
+    // Gera o e-mail padronizado que você usa no seu sistema
+    const emailGerado = `${usuario.toLowerCase().replace(/\s+/g, '')}@album2026.com`;
+
+    try {
+      await supabaseClient.auth.signOut();
+
+      const { error: erroLogin } = await supabaseClient.auth.signInWithPassword({
+        email: emailGerado,
         password: senha,
       });
-      if (error) setErro('Usuário ou senha incorretos.');
-      else router.push('/');
-    } else {
-      const { error } = await supabaseClient.auth.signUp({
-        email: emailFicticio,
-        password: senha,
-      });
-      if (error) setErro('Erro ao registrar. Tente outra senha ou usuário.');
-      else router.push('/');
+
+      if (erroLogin) {
+        console.error("Erro detalhado do Login:", erroLogin);
+        setErro('Usuário ou senha incorretos.');
+        return;
+      }
+
+      router.push('/');
+
+    } catch (err) {
+      console.error("Erro inesperado:", err);
+      setErro("Ocorreu um erro de conexão.");
     }
   };
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">

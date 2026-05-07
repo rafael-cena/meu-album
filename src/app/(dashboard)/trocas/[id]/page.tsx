@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 
 interface MatchTroca {
     membro_id: string;
@@ -94,9 +95,16 @@ export default function DetalheGrupo() {
         setLoading(false);
     };
 
-    const copiarId = () => {
-        navigator.clipboard.writeText(grupoId);
-        alert('ID do grupo copiado!');
+    const copiarLinkConvite = () => {
+        // Pega a URL base do site (ex: http://localhost:3000 ou https://seusite.com)
+        const linkSite = window.location.origin;
+        const linkConvite = `${linkSite}/trocas/convite/${grupoId}`;
+
+        // Cria uma mensagem amigável para o WhatsApp
+        const texto = `🤝 Vem trocar figurinhas da Copa comigo!\nClique no link abaixo para entrar no meu grupo de trocas automaticamente:\n👉 ${linkConvite}`;
+
+        navigator.clipboard.writeText(texto);
+        alert('Link de convite copiado! Agora é só colar no WhatsApp.');
     };
 
     return (
@@ -107,11 +115,19 @@ export default function DetalheGrupo() {
 
             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex justify-between items-center">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-800">{nomeGrupo}</h1>
+                    {/* Transformamos o título em um link que vai para a tela de Info */}
+                    <Link href={`/trocas/${grupoId}/info`} className="hover:opacity-80 transition-opacity">
+                        <h1 className="text-xl font-bold text-blue-700 flex items-center gap-2">
+                            {nomeGrupo} <span className="text-sm bg-blue-100 p-1 rounded-full px-2">ℹ️ Info</span>
+                        </h1>
+                    </Link>
                     <p className="text-xs text-gray-500 mt-1 break-all">ID: {grupoId}</p>
                 </div>
-                <button onClick={copiarId} className="bg-gray-100 p-2 rounded text-sm font-bold text-gray-700 hover:bg-gray-200">
-                    Copiar ID
+                <button
+                    onClick={copiarLinkConvite}
+                    className="bg-blue-50 p-2 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100 active:scale-95 border border-blue-200 transition-all flex items-center gap-1"
+                >
+                    <span>🔗</span> Convite
                 </button>
             </div>
 

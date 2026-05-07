@@ -100,6 +100,25 @@ export default function Carteira() {
     return { name: LABELS[t], value: calcularTotalPorTipo(t), tipo: t };
   }).filter(d => d.value > 0);
 
+  const excluirCusto = async (id: number) => {
+    // Pede uma confirmação rápida para evitar cliques acidentais
+    if (!window.confirm('Tem certeza que deseja excluir este registro?')) return;
+
+    const { error } = await supabase
+      .from('custos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Erro ao excluir o registro.');
+      console.error(error);
+    } else {
+      // Atualiza a lista na tela removendo o item deletado
+      setCustos(prevCustos => prevCustos.filter(custo => custo.id !== id));
+      // Dica: Se você tiver uma função que recalcula o total (ex: calcularTotal()), chame ela aqui!
+    }
+  };
+
   return (
     <div className="p-4 max-w-lg mx-auto mt-4 pb-24">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Carteira</h1>
@@ -206,14 +225,30 @@ export default function Carteira() {
       {/* 5. HISTÓRICO SIMPLIFICADO */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <p className="text-[10px] font-black text-gray-400 p-4 border-b uppercase tracking-widest bg-gray-50">Últimas Movimentações</p>
-        <ul className="divide-y divide-gray-100">
-          {custos.slice(0, 10).map(custo => (
-            <li key={custo.id} className="p-4 flex justify-between items-center">
+        <ul className="space-y-3">
+          {custos.map((custo) => (
+            <li key={custo.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-center">
               <div>
-                <p className="text-sm font-bold text-gray-800">{LABELS[custo.tipo]} (x{custo.qtd})</p>
-                <p className="text-[10px] text-gray-400">{new Date(custo.data_compra).toLocaleDateString()} {custo.descricao && `• ${custo.descricao}`}</p>
+                <h3 className="font-bold text-gray-800">{custo.descricao || 'Pacotinhos'}</h3>
+                <p className="text-sm text-gray-500">
+                  {custo.qtd}x R$ {custo.preco.toFixed(2).replace('.', ',')}
+                </p>
               </div>
-              <p className="font-black text-gray-600 text-sm">R$ {(custo.preco * custo.qtd).toFixed(2)}</p>
+
+              <div className="flex items-center gap-4">
+                <span className="font-black text-gray-600">
+                  R$ {(custo.qtd * custo.preco).toFixed(2).replace('.', ',')}
+                </span>
+
+                {/* BOTÃO DE EXCLUIR AQUI */}
+                <button
+                  onClick={() => excluirCusto(custo.id)}
+                  className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                  title="Excluir registro"
+                >
+                  🗑️
+                </button>
+              </div>
             </li>
           ))}
         </ul>
