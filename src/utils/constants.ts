@@ -47,7 +47,7 @@ export const SECOES_ALBUM: SecaoAlbum[] = [
   { nome: 'Áustria', prefixo: 'AUT', total: 20 },
   { nome: 'Jordânia', prefixo: 'JOR', total: 20 },
   { nome: 'Portugal', prefixo: 'POR', total: 20 },
-  { nome: 'Congo', prefixo: 'CGO', total: 20 },
+  { nome: 'RD do Congo', prefixo: 'COD', total: 20 },
   { nome: 'Uzbequistão', prefixo: 'UZB', total: 20 },
   { nome: 'Colômbia', prefixo: 'COL', total: 20 },
   { nome: 'Inglaterra', prefixo: 'ENG', total: 20 },
