@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏆 Meu Álbum 2026 - FIFA World Cup 2026™ Tracker
 
-## Getting Started
+Uma aplicação Full-Stack de alto desempenho projetada para gerenciar, otimizar e compartilhar o progresso da sua coleção de figurinhas para a **FIFA World Cup 2026™**.
 
-First, run the development server:
+## 🔗 Acesse o Projeto
+O sistema está disponível em: **[meu-album.site](https://meu-album.site)**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Funcionalidades
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O projeto foi construído com foco na experiência do usuário e na precisão dos dados, oferecendo ferramentas completas para o colecionador moderno:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* **🗂️ Registro de Figurinhas**: Interface intuitiva para marcar figurinhas obtidas e gerenciar o volume de repetidas.
+* **📊 Dashboard de Conclusão**: Visualização gráfica em tempo real da porcentagem de conclusão do álbum, segmentada por categorias ou seleções.
+* **💰 Controle Financeiro**: Registro detalhado de gastos com compra de pacotinhos e álbuns.
+* **📈 Gráficos de Investimento**: Visualização analítica dos gastos totais ao longo do tempo.
+* **🤝 Grupos de Troca**: Sistema de criação e entrada em grupos para facilitar o networking entre colecionadores.
+* **⚡ Identificação Automática de Trocas**: Algoritmo que cruza os dados do grupo e identifica automaticamente quais membros possuem as figurinhas que faltam para você (e vice-versa).
+* **📤 Módulo de Exportação**: Geração de listas formatadas de repetidas e faltantes para compartilhamento rápido via redes sociais ou apps de mensagem.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Tecnologias Utilizadas
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Este projeto utiliza uma stack moderna e escalável:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+* **[Next.js](https://nextjs.org/)**: Framework React para uma interface rápida, responsiva e otimizada para SEO.
+* **[Supabase](https://supabase.com/)**: Backend as a Service (BaaS) provendo banco de dados PostgreSQL, autenticação e políticas de segurança em nível de linha (RLS).
+* **[TypeScript](https://www.typescriptlang.org/)**: Tipagem estática para maior segurança e manutenibilidade do código.
+* **[Tailwind CSS](https://tailwindcss.com/)**: Estilização baseada em utilitários para um design minimalista e moderno.
+* **🤖 Google Gemini**: Este projeto foi desenvolvido com o suporte da inteligência artificial **Gemini**, atuando como co-piloto na definição da arquitetura de dados, implementação de regras complexas de segurança (RLS) e otimização de consultas SQL.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🚀 Como Executar Localmente
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  Clone o repositório:
+    ```bash
+    git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
+    ```
+2.  Instale as dependências:
+    ```bash
+    npm install
+    ```
+3.  Configure as variáveis de ambiente (`.env.local`) com suas chaves do Supabase.
+4.  Inicie o servidor de desenvolvimento:
+    ```bash
+    npm run dev
+    ```
+
+---
+
+Desenvolvido para colecionadores que acreditam que a tecnologia pode tornar a jornada rumo ao álbum completo muito mais organizada e divertida. ⚽️
