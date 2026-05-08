@@ -2,6 +2,20 @@
 
 Uma aplicação Full-Stack de alto desempenho projetada para gerenciar, otimizar e compartilhar o progresso da sua coleção de figurinhas para a **FIFA World Cup 2026™**.
 
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+Este projeto utiliza uma stack moderna e escalável:
+
+![Next.js](https://img.shields.io/badge/Next.js-App_Router-black?style=flat-square&logo=nextdotjs&logoColor=white&labelColor=0f1117)
+![Supabase](https://img.shields.io/badge/Supabase-Database_&_Auth-3ECF8E?style=flat-square&logo=supabase&logoColor=white&labelColor=0f1117)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript&logoColor=white&labelColor=0f1117)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white&labelColor=0f1117)
+![Google Gemini](https://img.shields.io/badge/Google_Gemini-AI_Copilot-8E75B2?style=flat-square&logo=googlegemini&logoColor=white&labelColor=0f1117)
+
+---
+
 ## 🔗 Acesse o Projeto
 O sistema está disponível em: **[meu-album.site](https://meu-album.site)**
 
@@ -18,18 +32,6 @@ O projeto foi construído com foco na experiência do usuário e na precisão do
 * **🤝 Grupos de Troca**: Sistema de criação e entrada em grupos para facilitar o networking entre colecionadores.
 * **⚡ Identificação Automática de Trocas**: Algoritmo que cruza os dados do grupo e identifica automaticamente quais membros possuem as figurinhas que faltam para você (e vice-versa).
 * **📤 Módulo de Exportação**: Geração de listas formatadas de repetidas e faltantes para compartilhamento rápido via redes sociais ou apps de mensagem.
-
----
-
-## 🛠️ Tecnologias Utilizadas
-
-Este projeto utiliza uma stack moderna e escalável:
-
-* **[Next.js](https://nextjs.org/)**: Framework React para uma interface rápida, responsiva e otimizada para SEO.
-* **[Supabase](https://supabase.com/)**: Backend as a Service (BaaS) provendo banco de dados PostgreSQL, autenticação e políticas de segurança em nível de linha (RLS).
-* **[TypeScript](https://www.typescriptlang.org/)**: Tipagem estática para maior segurança e manutenibilidade do código.
-* **[Tailwind CSS](https://tailwindcss.com/)**: Estilização baseada em utilitários para um design minimalista e moderno.
-* **🤖 Google Gemini**: Este projeto foi desenvolvido com o suporte da inteligência artificial **Gemini**, atuando como co-piloto na definição da arquitetura de dados, implementação de regras complexas de segurança (RLS) e otimização de consultas SQL.
 
 ---
 
