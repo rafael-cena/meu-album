@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SECOES_ALBUM } from '@/utils/constants';
+import { COUNTRY_FLAGS, SECOES_ALBUM } from '@/utils/constants';
 
 interface Repetida {
   codigo: string;
@@ -183,11 +183,45 @@ export default function ExportarRelatorios() {
       return;
     }
 
-    const linkSite = window.location.origin;
+    let texto = `📋 *Minhas Repetidas - Copa 2026*\n\n`;
 
-    const texto = `📋 *Minhas Repetidas - Copa 2026*\n\n` +
-      repetidasOrdenadas.map(r => `${r.codigo} (${r.quantidade}x)`).join(', ') +
-      `\n\n⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
+    // 1. Agrupa as figurinhas multiplicando pelas quantidades
+    const grupos: Record<string, string[]> = {};
+
+    repetidasOrdenadas.forEach(rep => {
+      const match = rep.codigo.match(/^([a-zA-Z]+)/);
+      const prefixo = match ? match[1].toUpperCase() : 'OUTROS';
+
+      if (!grupos[prefixo]) grupos[prefixo] = [];
+
+      // Adiciona o código no array N vezes, baseado na quantidade
+      for (let i = 0; i < rep.quantidade; i++) {
+        grupos[prefixo].push(rep.codigo);
+      }
+    });
+
+    // 2. Monta o texto seguindo a ordem oficial do álbum (SECOES_ALBUM)
+    SECOES_ALBUM.forEach(secao => {
+      if (grupos[secao.prefixo] && grupos[secao.prefixo].length > 0) {
+        // Pega a bandeira da constante, ou usa uma bandeira branca se não achar
+        const bandeira = COUNTRY_FLAGS[secao.prefixo] || '🏳️';
+
+        texto += `${bandeira} *${secao.prefixo}*\n${grupos[secao.prefixo].join(', ')}\n\n`;
+        // Remove do objeto para sabermos se sobrou alguma figurinha especial no final
+        delete grupos[secao.prefixo];
+      }
+    });
+
+    // 3. Adiciona figurinhas extras/promocionais que não estejam na constante SECOES_ALBUM
+    Object.keys(grupos).forEach(prefixo => {
+      if (grupos[prefixo].length > 0) {
+        const bandeira = COUNTRY_FLAGS[prefixo] || '🏳️';
+        texto += `${bandeira} *${prefixo}*\n${grupos[prefixo].join(', ')}\n\n`;
+      }
+    });
+
+    const linkSite = window.location.origin;
+    texto += `⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
 
     navigator.clipboard.writeText(texto);
     alert('Lista de REPETIDAS copiada para a área de transferência!');
@@ -209,12 +243,14 @@ export default function ExportarRelatorios() {
 
       for (let i = 1; i <= secao.total; i++) {
         if (!numerosObtidos.includes(i)) {
-          faltantesSecao.push(i);
+          // Empurra o código completo (ex: BRA1) e não apenas o número
+          faltantesSecao.push(`${secao.prefixo}${i}`);
         }
       }
 
       if (faltantesSecao.length > 0) {
-        texto += `*${secao.nome}:* ${faltantesSecao.join(', ')}\n`;
+        const bandeira = COUNTRY_FLAGS[secao.prefixo] || '🏳️';
+        texto += `${bandeira} *${secao.prefixo}*\n${faltantesSecao.join(', ')}\n\n`;
         temFaltante = true;
       }
     });
@@ -225,7 +261,7 @@ export default function ExportarRelatorios() {
     }
 
     const linkSite = window.location.origin;
-    texto += `\n⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
+    texto += `⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
 
     navigator.clipboard.writeText(texto);
     alert('Lista de FALTANTES copiada para a área de transferência!');
