@@ -177,6 +177,11 @@ export default function ExportarRelatorios() {
   };
 
   // --- FUNÇÕES DE EXPORTAÇÃO ---
+  const removerPrefixoDoCodigo = (codigo: string, prefixo: string) => {
+    if (prefixo === 'OUTROS') return codigo;
+    return codigo.replace(new RegExp(`^${prefixo}`, 'i'), '');
+  };
+
   const copiarRepetidas = () => {
     if (repetidasOrdenadas.length === 0) {
       alert('Você não tem figurinhas repetidas cadastradas.');
@@ -196,7 +201,7 @@ export default function ExportarRelatorios() {
 
       // Adiciona o código no array N vezes, baseado na quantidade
       for (let i = 0; i < rep.quantidade; i++) {
-        grupos[prefixo].push(rep.codigo);
+        grupos[prefixo].push(removerPrefixoDoCodigo(rep.codigo, prefixo));
       }
     });
 
@@ -206,7 +211,7 @@ export default function ExportarRelatorios() {
         // Pega a bandeira da constante, ou usa uma bandeira branca se não achar
         const bandeira = COUNTRY_FLAGS[secao.prefixo] || '🏳️';
 
-        texto += `${bandeira} *${secao.prefixo}*\n${grupos[secao.prefixo].join(', ')}\n\n`;
+        texto += `${bandeira} ${secao.prefixo}: ${grupos[secao.prefixo].join(', ')}\n`;
         // Remove do objeto para sabermos se sobrou alguma figurinha especial no final
         delete grupos[secao.prefixo];
       }
@@ -216,12 +221,12 @@ export default function ExportarRelatorios() {
     Object.keys(grupos).forEach(prefixo => {
       if (grupos[prefixo].length > 0) {
         const bandeira = COUNTRY_FLAGS[prefixo] || '🏳️';
-        texto += `${bandeira} *${prefixo}*\n${grupos[prefixo].join(', ')}\n\n`;
+        texto += `${bandeira} ${prefixo}: ${grupos[prefixo].join(', ')}\n`;
       }
     });
 
     const linkSite = window.location.origin;
-    texto += `⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
+    texto += `\n⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
 
     navigator.clipboard.writeText(texto);
     alert('Lista de REPETIDAS copiada para a área de transferência!');
@@ -239,18 +244,17 @@ export default function ExportarRelatorios() {
         return isNaN(num) ? -1 : num;
       });
 
-      const faltantesSecao = [];
+      const faltantesSecao: string[] = [];
 
       for (let i = 1; i <= secao.total; i++) {
         if (!numerosObtidos.includes(i)) {
-          // Empurra o código completo (ex: BRA1) e não apenas o número
-          faltantesSecao.push(`${secao.prefixo}${i}`);
+          faltantesSecao.push(String(i));
         }
       }
 
       if (faltantesSecao.length > 0) {
         const bandeira = COUNTRY_FLAGS[secao.prefixo] || '🏳️';
-        texto += `${bandeira} *${secao.prefixo}*\n${faltantesSecao.join(', ')}\n\n`;
+        texto += `${bandeira} ${secao.prefixo}: ${faltantesSecao.join(', ')}\n`;
         temFaltante = true;
       }
     });
@@ -261,7 +265,7 @@ export default function ExportarRelatorios() {
     }
 
     const linkSite = window.location.origin;
-    texto += `⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
+    texto += `\n⚡ Organize seu álbum e crie grupos de trocas em:\n👉 ${linkSite}`;
 
     navigator.clipboard.writeText(texto);
     alert('Lista de FALTANTES copiada para a área de transferência!');
