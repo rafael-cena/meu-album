@@ -3,16 +3,21 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SECOES_ALBUM, COUNTRY_FLAGS } from '@/utils/constants';
+import type { SecaoAlbum } from '@/utils/constants';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
-function chunkArray(array: any[], size: number) {
-  const result = [];
+function chunkArray<T>(array: T[], size: number) {
+  const result: T[][] = [];
   for (let i = 0; i < array.length; i += size) {
     result.push(array.slice(i, i + size));
   }
   return result;
 }
+
+type ModoExibicao = 'grupos' | 'grade';
+
+const MODO_EXIBICAO_STORAGE_KEY = 'dashboard_modo_exibicao';
 
 // Função para remover acentos e ignorar maiúsculas (ex: "Japão" vira "japao")
 const normalizarTexto = (texto: string) => {
@@ -25,6 +30,7 @@ export default function Dashboard() {
   const [obtidas, setObtidas] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [gruposAbertos, setGruposAbertos] = useState<Record<string, boolean>>({});
+  const [modoExibicao, setModoExibicao] = useState<ModoExibicao>('grupos');
 
   // Novo estado para a barra de pesquisa
   const [busca, setBusca] = useState('');
@@ -50,8 +56,21 @@ export default function Dashboard() {
     carregarProgresso();
   }, []);
 
+  useEffect(() => {
+    const preferenciaSalva = localStorage.getItem(MODO_EXIBICAO_STORAGE_KEY);
+
+    if (preferenciaSalva === 'grupos' || preferenciaSalva === 'grade') {
+      setModoExibicao(preferenciaSalva);
+    }
+  }, []);
+
   const toggleGrupo = (nome: string) => {
     setGruposAbertos(prev => ({ ...prev, [nome]: !prev[nome] }));
+  };
+
+  const alterarModoExibicao = (modo: ModoExibicao) => {
+    setModoExibicao(modo);
+    localStorage.setItem(MODO_EXIBICAO_STORAGE_KEY, modo);
   };
 
   const fwcSecao = SECOES_ALBUM.find(s => s.prefixo === 'FWC');
@@ -70,7 +89,7 @@ export default function Dashboard() {
     normalizarTexto(secao.prefixo).includes(normalizarTexto(busca))
   );
 
-  const renderCard = (secao: any, isFullWidth = false) => {
+  const renderCard = (secao: SecaoAlbum | undefined, isFullWidth = false) => {
     if (!secao) return null;
     const bandeira = COUNTRY_FLAGS[secao.prefixo] || '';
     const obtidasDestaSecao = obtidas.filter(cod => cod.startsWith(secao.prefixo)).length;
@@ -183,6 +202,35 @@ export default function Dashboard() {
             )}
           </div>
 
+          {!busca.trim() && (
+            <div className="mb-6 flex rounded-xl bg-white border border-gray-200 p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => alterarModoExibicao('grupos')}
+                aria-pressed={modoExibicao === 'grupos'}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition-all ${
+                  modoExibicao === 'grupos'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                Por grupos
+              </button>
+              <button
+                type="button"
+                onClick={() => alterarModoExibicao('grade')}
+                aria-pressed={modoExibicao === 'grade'}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition-all ${
+                  modoExibicao === 'grade'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                Grade completa
+              </button>
+            </div>
+          )}
+
           {/* Renderização Condicional: Pesquisa vs Layout Normal */}
           {busca.trim().length > 0 ? (
             // MODO DE PESQUISA
@@ -201,44 +249,50 @@ export default function Dashboard() {
             <>
               {renderCard(fwcSecao, true)}
 
-              <div className="space-y-3 mb-4">
-                {gruposDePaises.map((grupo) => {
-                  const isAberto = gruposAbertos[grupo.nome];
-                  const totalGrupo = grupo.times.reduce((acc, t) => acc + t.total, 0);
-                  const obtidasGrupo = grupo.times.reduce((acc, t) => {
-                    return acc + obtidas.filter(cod => cod.startsWith(t.prefixo)).length;
-                  }, 0);
+              {modoExibicao === 'grupos' ? (
+                <div className="space-y-3 mb-4">
+                  {gruposDePaises.map((grupo) => {
+                    const isAberto = gruposAbertos[grupo.nome];
+                    const totalGrupo = grupo.times.reduce((acc, t) => acc + t.total, 0);
+                    const obtidasGrupo = grupo.times.reduce((acc, t) => {
+                      return acc + obtidas.filter(cod => cod.startsWith(t.prefixo)).length;
+                    }, 0);
 
-                  return (
-                    <div key={grupo.nome} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                      <button
-                        onClick={() => toggleGrupo(grupo.nome)}
-                        className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <h2 className="font-bold text-gray-800 text-lg">{grupo.nome}</h2>
-                          {obtidasGrupo === totalGrupo && (
-                            <span className="bg-green-100 text-green-600 text-[10px] uppercase font-black px-2 py-0.5 rounded">100%</span>
-                          )}
-                        </div>
+                    return (
+                      <div key={grupo.nome} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <button
+                          onClick={() => toggleGrupo(grupo.nome)}
+                          className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <h2 className="font-bold text-gray-800 text-lg">{grupo.nome}</h2>
+                            {obtidasGrupo === totalGrupo && (
+                              <span className="bg-green-100 text-green-600 text-[10px] uppercase font-black px-2 py-0.5 rounded">100%</span>
+                            )}
+                          </div>
 
-                        <div className="flex items-center gap-3 text-gray-400">
-                          <span className="text-xs font-bold">{obtidasGrupo}/{totalGrupo}</span>
-                          <svg className={`w-5 h-5 transform transition-transform duration-200 ${isAberto ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </button>
+                          <div className="flex items-center gap-3 text-gray-400">
+                            <span className="text-xs font-bold">{obtidasGrupo}/{totalGrupo}</span>
+                            <svg className={`w-5 h-5 transform transition-transform duration-200 ${isAberto ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </button>
 
-                      {isAberto && (
-                        <div className="p-4 grid grid-cols-2 gap-4 border-t border-gray-100 bg-white">
-                          {grupo.times.map(time => renderCard(time, false))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        {isAberto && (
+                          <div className="p-4 grid grid-cols-2 gap-4 border-t border-gray-100 bg-white">
+                            {grupo.times.map(time => renderCard(time, false))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {selecoes.map(secao => renderCard(secao, false))}
+                </div>
+              )}
 
               {renderCard(ccSecao, true)}
 
