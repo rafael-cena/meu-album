@@ -316,6 +316,20 @@ export default function Dashboard() {
                   </Link>
 
                   <Link
+                    href="/insercao/camera"
+                    className="bg-slate-800 hover:bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between shadow-md active:scale-95 transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl drop-shadow-sm">📷</span>
+                      <div className="text-left">
+                        <span className="font-bold text-base block">Registro por Câmera</span>
+                        <span className="text-xs text-slate-200">Escanear e salvar no álbum</span>
+                      </div>
+                    </div>
+                    <span className="text-slate-200 text-2xl font-light">→</span>
+                  </Link>
+
+                  <Link
                     href="/insercao/repetidas"
                     className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl flex items-center justify-between shadow-md active:scale-95 transition-all"
                   >
