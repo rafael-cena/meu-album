@@ -182,6 +182,10 @@ export default function ExportarRelatorios() {
     return codigo.replace(new RegExp(`^${prefixo}`, 'i'), '');
   };
 
+  const formatarCodigoExportacao = (codigo: string, quantidade: number) => {
+    return quantidade > 1 ? `${codigo}(${quantidade}x)` : codigo;
+  };
+
   const copiarRepetidas = () => {
     if (repetidasOrdenadas.length === 0) {
       alert('Você não tem figurinhas repetidas cadastradas.');
@@ -190,7 +194,7 @@ export default function ExportarRelatorios() {
 
     let texto = `📋 *Minhas Repetidas - Copa 2026*\n\n`;
 
-    // 1. Agrupa as figurinhas multiplicando pelas quantidades
+    // 1. Agrupa as figurinhas mantendo a quantidade de cada código
     const grupos: Record<string, string[]> = {};
 
     repetidasOrdenadas.forEach(rep => {
@@ -199,10 +203,8 @@ export default function ExportarRelatorios() {
 
       if (!grupos[prefixo]) grupos[prefixo] = [];
 
-      // Adiciona o código no array N vezes, baseado na quantidade
-      for (let i = 0; i < rep.quantidade; i++) {
-        grupos[prefixo].push(removerPrefixoDoCodigo(rep.codigo, prefixo));
-      }
+      const codigoSemPrefixo = removerPrefixoDoCodigo(rep.codigo, prefixo);
+      grupos[prefixo].push(formatarCodigoExportacao(codigoSemPrefixo, rep.quantidade));
     });
 
     // 2. Monta o texto seguindo a ordem oficial do álbum (SECOES_ALBUM)
