@@ -31,6 +31,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [gruposAbertos, setGruposAbertos] = useState<Record<string, boolean>>({});
   const [modoExibicao, setModoExibicao] = useState<ModoExibicao>('grupos');
+  const [secaoModal, setSecaoModal] = useState<SecaoAlbum | null>(null);
+  const [figurinhaSelecionada, setFigurinhaSelecionada] = useState<string | null>(null);
+  const [repetidasMap, setRepetidasMap] = useState<Record<string, number>>({});
 
   // Novo estado para a barra de pesquisa
   const [busca, setBusca] = useState('');
@@ -44,12 +47,26 @@ export default function Dashboard() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
 
-      const { data } = await supabase
+      const { data: obtidasData } = await supabase
         .from('obtidas')
         .select('codigo')
         .eq('user_id', userData.user.id);
 
-      if (data) setObtidas(data.map(item => item.codigo));
+      if (obtidasData) setObtidas(obtidasData.map(item => item.codigo));
+
+      const { data: repetidasData } = await supabase
+        .from('repetidas')
+        .select('codigo, quantidade')
+        .eq('user_id', userData.user.id);
+
+      if (repetidasData) {
+        const novoMapa: Record<string, number> = {};
+        repetidasData.forEach(item => {
+          novoMapa[item.codigo] = item.quantidade;
+        });
+        setRepetidasMap(novoMapa);
+      }
+
       setLoading(false);
     };
 
@@ -66,6 +83,10 @@ export default function Dashboard() {
 
   const toggleGrupo = (nome: string) => {
     setGruposAbertos(prev => ({ ...prev, [nome]: !prev[nome] }));
+  };
+
+  const obterCodigosSecao = (secao: SecaoAlbum) => {
+    return Array.from({ length: secao.total }, (_, index) => `${secao.prefixo}${index + 1}`);
   };
 
   const alterarModoExibicao = (modo: ModoExibicao) => {
@@ -97,45 +118,54 @@ export default function Dashboard() {
     const concluido = falta === 0;
 
     return (
-      <Link
+      <div
         key={secao.prefixo}
-        href={`/secao/${secao.prefixo}`}
-        className={`relative bg-white rounded-xl shadow-sm border transition-all active:scale-95 flex 
-          ${concluido ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-blue-400'}
-          ${isFullWidth ? 'flex-row justify-between items-center p-5 w-full mb-4' : 'flex-col items-center justify-center text-center p-4'}
-        `}
+        className={isFullWidth ? 'w-full mb-4' : 'min-w-0'}
       >
-        {isFullWidth ? (
-          <>
-            <div className="flex items-center gap-4">
-              {bandeira && <span className="text-4xl drop-shadow-sm">{bandeira}</span>}
-              <div>
-                <span className="font-bold text-gray-800 text-lg leading-tight block">{secao.nome}</span>
-                <span className="text-xs text-gray-400 font-bold uppercase">{secao.total} figurinhas</span>
+        <button
+          type="button"
+          onClick={() => {
+            setFigurinhaSelecionada(null);
+            setSecaoModal(secao);
+          }}
+          className={`relative bg-white rounded-xl shadow-sm border transition-all active:scale-95 flex w-full
+            ${concluido ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-blue-400'}
+            ${isFullWidth ? 'flex-row justify-between items-center p-5' : 'flex-col items-center justify-center text-center p-4 min-h-36'}
+            select-none
+          `}
+        >
+          {isFullWidth ? (
+            <>
+              <div className="flex items-center gap-4 text-left">
+                {bandeira && <span className="text-4xl drop-shadow-sm">{bandeira}</span>}
+                <div>
+                  <span className="font-bold text-gray-800 text-lg leading-tight block">{secao.nome}</span>
+                  <span className="text-xs text-gray-400 font-bold uppercase">{secao.total} figurinhas</span>
+                </div>
               </div>
-            </div>
-            <div>
-              {concluido ? (
-                <span className="text-[10px] font-black uppercase px-2 py-1.5 rounded bg-green-100 text-green-600">Completo!</span>
-              ) : (
-                <span className="text-[10px] font-black uppercase px-2 py-1.5 rounded bg-orange-100 text-orange-600">Faltam {falta}</span>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            {bandeira && <span className="text-3xl mb-2 drop-shadow-sm">{bandeira}</span>}
-            <span className="font-bold text-gray-800 leading-tight">{secao.nome}</span>
-            <div className="mt-2">
-              {concluido ? (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-green-100 text-green-600">Completo!</span>
-              ) : (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-orange-100 text-orange-600">Faltam {falta}</span>
-              )}
-            </div>
-          </>
-        )}
-      </Link>
+              <div>
+                {concluido ? (
+                  <span className="text-[10px] font-black uppercase px-2 py-1.5 rounded bg-green-100 text-green-600">Completo!</span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase px-2 py-1.5 rounded bg-orange-100 text-orange-600">Faltam {falta}</span>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {bandeira && <span className="text-3xl mb-2 drop-shadow-sm">{bandeira}</span>}
+              <span className="font-bold text-gray-800 leading-tight">{secao.nome}</span>
+              <div className="mt-2">
+                {concluido ? (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-green-100 text-green-600">Completo!</span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-orange-100 text-orange-600">Faltam {falta}</span>
+                )}
+              </div>
+            </>
+          )}
+        </button>
+      </div>
     );
   };
 
@@ -152,6 +182,68 @@ export default function Dashboard() {
 
     conferirConvites();
   }, []);
+
+  const fecharModalSecao = () => {
+    setSecaoModal(null);
+    setFigurinhaSelecionada(null);
+  };
+
+  const handleCliqueFigurinha = async (codigo: string) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+
+    if (!obtidas.includes(codigo)) {
+      await supabase.from('obtidas').insert({ user_id: userId, codigo });
+      setObtidas(prev => [...prev, codigo]);
+      return;
+    }
+
+    setFigurinhaSelecionada(codigo);
+  };
+
+  const gerenciarRepetida = async (incremento: number) => {
+    if (!figurinhaSelecionada) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+
+    const qtdAtual = repetidasMap[figurinhaSelecionada] || 0;
+    const novaQtd = qtdAtual + incremento;
+
+    if (novaQtd > 0) {
+      await supabase.from('repetidas').upsert({
+        user_id: userId,
+        codigo: figurinhaSelecionada,
+        quantidade: novaQtd
+      }, { onConflict: 'user_id,codigo' });
+
+      setRepetidasMap(prev => ({ ...prev, [figurinhaSelecionada]: novaQtd }));
+      return;
+    }
+
+    if (novaQtd === 0 && qtdAtual > 0) {
+      await supabase.from('repetidas').delete().match({ user_id: userId, codigo: figurinhaSelecionada });
+      setRepetidasMap(prev => {
+        const novoMapa = { ...prev };
+        delete novoMapa[figurinhaSelecionada];
+        return novoMapa;
+      });
+    }
+  };
+
+  const excluirObtida = async () => {
+    if (!figurinhaSelecionada) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+
+    await supabase.from('obtidas').delete().match({ user_id: userId, codigo: figurinhaSelecionada });
+    setObtidas(prev => prev.filter(codigo => codigo !== figurinhaSelecionada));
+    setFigurinhaSelecionada(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-24">
@@ -347,6 +439,121 @@ export default function Dashboard() {
             </>
           )}
 
+        </div>
+      )}
+
+      {secaoModal && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/50" onClick={fecharModalSecao}>
+          <div
+            className="flex max-h-[82vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-gray-100 bg-white p-4">
+              <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gray-300" />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="text-3xl">{COUNTRY_FLAGS[secaoModal.prefixo] || ''}</span>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-xl font-black text-gray-800">{secaoModal.nome}</h2>
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                      {secaoModal.total} figurinhas
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={fecharModalSecao}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-sm font-black text-gray-600"
+                  aria-label="Fechar figurinhas da seleção"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {figurinhaSelecionada && (
+                <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-gray-400">Figurinha</p>
+                      <h3 className="text-lg font-black text-gray-800">{figurinhaSelecionada}</h3>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setFigurinhaSelecionada(null)}
+                      className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-gray-500"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg bg-white p-3">
+                    <span className="text-sm font-bold text-gray-700">
+                      Repetidas: {repetidasMap[figurinhaSelecionada] || 0}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => gerenciarRepetida(-1)}
+                        className="flex h-8 w-8 items-center justify-center rounded bg-red-500 text-lg font-black text-white"
+                      >
+                        -
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => gerenciarRepetida(1)}
+                        className="flex h-8 w-8 items-center justify-center rounded bg-green-500 text-lg font-black text-white"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {(repetidasMap[figurinhaSelecionada] || 0) === 0 && (
+                    <button
+                      type="button"
+                      onClick={excluirObtida}
+                      className="mt-3 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-600"
+                    >
+                      Remover da coleção
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-8">
+              <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
+                {obterCodigosSecao(secaoModal).map((codigo, index) => {
+                  const obtida = obtidas.includes(codigo);
+                  const qtdRepetida = repetidasMap[codigo] || 0;
+
+                  return (
+                    <button
+                      type="button"
+                      key={codigo}
+                      onClick={() => handleCliqueFigurinha(codigo)}
+                      className={`relative flex h-12 items-center justify-center rounded-lg border text-sm font-black shadow-sm transition-all ${
+                        figurinhaSelecionada === codigo
+                          ? 'border-green-700 bg-green-600 text-white'
+                          : obtida
+                            ? 'border-blue-700 bg-blue-600 text-white'
+                            : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {index + 1}
+                      {qtdRepetida > 0 && (
+                        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+                          {qtdRepetida}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
